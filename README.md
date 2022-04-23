@@ -1,6 +1,10 @@
 # RFS-Prototype
 
-RfS Console Prototype
+This is the console implementation of RFS.
+
+`main.cpp` is the main console interface.
+
+`funcs.hpp` is the background work that is done. This file will be used in the final version of RFS.
 
 ## Security
 
@@ -16,8 +20,8 @@ The GUI will be written using wxWidgets.
 
 Users are able to:
 
- - *Store, delete and export* files and folders 🔒📁
- - *Display all files* in current directory 🔎
- - *Move* into and out of folders ➡️
- - *Open files* (read only) 📝
- - *Change their password* 🔑
+ - 🔒📁 *Store, delete and export* files and folders 
+ - 🔎 *Display all files* in current directory 
+ - ➡️ *Move* into and out of folders 
+ - 📝 *Open files* (read only) 
+ - 🔑 *Change their password* 
