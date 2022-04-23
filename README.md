@@ -1,4 +1,8 @@
 # RFS-Prototype
-Console prototype for a File Encryption System.
 
-Files are encrypted with AES-256, and passwords are stored as SHA256 hashes appended with 32-character salts.
+RfS Console Prototype
+
+## Security
+
+*Hashing*: Passwords are hashed through __100k__ iterations, and salted with a cryptographically-secure salt of 32 characters.
+*
