@@ -6,14 +6,13 @@
 #include <fileapi.h>
 #include <filesystem>
 #include <Windows.h>
+#include <algorithm>
 
 #include "aes/aes.hpp"
 #include "sha256/sha256.hpp"
+#include "rand/cs_random.hpp"
 
 #pragma once
-
-// random variables
-std::uniform_int_distribution<int> nRange(0, 61);
 
 // folder object
 class EncryptedFd{
@@ -173,7 +172,7 @@ void gStoredKey(std::string& sKey, std::string pass){
 
         // randomly generate new key
         std::string nKey;
-        for (int i = 0; i != 30; i++){nKey += "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"[nRange(rGenerator)];}
+        for (int i = 0; i != 30; i++){nKey += "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"[randInt(0, 61)];}
         EncryptRes eKey = encrypt(nKey, pass);
         
         // write new key
@@ -206,7 +205,7 @@ void gStoredKey(std::string& sKey, std::string pass){
 void stoNewPass(std::string pass){
     std::string salt;
     std::ofstream pFile("password/password.pw");
-    for (int i = 0; i != 32; i++){salt += "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"[nRange(rGenerator)];}
+    for (int i = 0; i != 32; i++){salt += "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"[randInt(0, 61)];}
     pFile << sha256(pass + salt, 100000) << "|||" << salt << "|||";
     pFile.close();
 }
@@ -236,10 +235,12 @@ void stoFile(std::string sFilePath, std::string folder, std::string key){
             // check if folder name already stored
             bool create = true;
             std::string sFdname;
+            std::vector<std::string> aFdnames;
             for (EncryptedFd eFd: gAllFolders(curDir, key)){
                 if (eFd.name == fd){
                     create = false;
                     sFdname = eFd.eName;
+                    aFdnames.push_back(eFd.eName);
                 }
             }
             
@@ -248,8 +249,15 @@ void stoFile(std::string sFilePath, std::string folder, std::string key){
             // get new folder name using random variables from aes.hpp
             std::string nFdname;
             if (create){
-                for (int i = 0; i != 16; i++){
-                    nFdname += "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"[nRange(rGenerator)];
+                while (true){
+                    nFdname.clear();
+                    for (int i = 0; i != 16; i++){
+                        nFdname += "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"[randInt(0, 61)];
+                    }
+                    // no collision
+                    if (std::find(aFdnames.begin(), aFdnames.end(), nFdname) == aFdnames.end()){
+                        break;
+                    }
                 }
             } else {
                 nFdname = sFdname;
@@ -285,8 +293,18 @@ void stoFile(std::string sFilePath, std::string folder, std::string key){
 
     // get new filename using random variables from aes.hpp
     std::string nFilename;
-    for (int i = 0; i != 16; i++){
-        nFilename += "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"[nRange(rGenerator)];
+    std::vector<std::string> aFlnames;
+    for (EncryptedFl eFile: gAllFiles(curDir, key)){
+        aFlnames.push_back(eFile.eName);
+    }
+    while (true){
+        nFilename.clear();
+        for (int i = 0; i != 16; i++){
+            nFilename += "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"[randInt(0, 61)];
+        }
+        if (std::find(aFlnames.begin(), aFlnames.end(), nFilename) == aFlnames.end()){
+            break;
+        }
     }
 
     // write to new file
@@ -349,11 +367,13 @@ void movFd(std::string newFd, std::string& curDir, std::string& curDisDir, std::
 }
 
 // open file (read-only)
-void oFile(std::string sFilename, std::string folder, std::string key){
+void oFile(std::string sFilename, std::string folder, std::string key, bool open = true, std::string outFd = "temp"){
     for (EncryptedFl eFile: gAllFiles("data" + folder, key)){
+
         if (eFile.name == sFilename){
+
             // write decrypted
-            std::ofstream oFileWrite("temp/" + sFilename, std::ios_base::binary);
+            std::ofstream oFileWrite(outFd + "/" + sFilename, std::ios_base::binary);
             std::ifstream sFileRead("data" + folder + "/" + eFile.eName + ".encrypted", std::ios_base::binary);
             std::ostringstream ssContents;
             std::string sfContents;
@@ -364,9 +384,12 @@ void oFile(std::string sFilename, std::string folder, std::string key){
             oFileWrite.close();
 
             // open with associated file
-            SetCurrentDirectory("temp");
-            ShellExecute(0, 0, sFilename.c_str(), 0, 0, SW_SHOW);
-            SetCurrentDirectory("../");
+            if (open){
+                std::string curDir = std::filesystem::current_path().string();
+                SetCurrentDirectory("temp");
+                ShellExecute(0, 0, sFilename.c_str(), 0, 0, SW_SHOW);
+                SetCurrentDirectory(curDir.c_str());
+            }
 
             return;
         }
@@ -404,8 +427,55 @@ void delFd(std::string dFdname, std::string folder, std::string key){
     fdMapWrite.close();
 }
 
+// recurse folders
+void recFds(std::string fdName, std::string rName, std::string key, std::vector<std::string>& retFd, 
+            std::vector<std::pair<std::pair<std::string, std::string>, EncryptedFl>>& retFl, bool isRec = false){
+    if (!isRec) fdName = "data" + fdName;
+    for (EncryptedFl eFile: gAllFiles(fdName, key)){
+        retFl.push_back(std::make_pair(std::make_pair(fdName, rName), eFile));
+    }
+    for (EncryptedFd eFd: gAllFolders(fdName, key)){
+        retFd.push_back(rName + "/" + eFd.name);
+        recFds(fdName + "/" + eFd.eName, rName + "/" + eFd.name, key, retFd, retFl, true);
+    }
+}
+
+// export out file
+void exportFl(std::string fName, std::string curDir, std::string outFd, std::string key){
+    oFile(fName, curDir, key, false, outFd);
+}
+
+// export out folder
+void exportFd(std::string rName, std::string folder, std::string outFd, std::string key){
+
+    // get folders and files to create
+    std::string fdName;
+    std::vector<std::string> cFds;
+    std::vector<std::pair<std::pair<std::string, std::string>, EncryptedFl>> cFiles;
+    for (EncryptedFd fd: gAllFolders("data" + folder, key)){
+        if (fd.name == rName){
+            fdName = folder + "/" + fd.eName;
+            break;
+        }
+    }
+    recFds(fdName, rName, key, cFds, cFiles);
+
+    // create folders
+    CreateDirectory((outFd + "/" + rName).c_str(), NULL);
+    for (std::string fd: cFds){
+        CreateDirectory((outFd + "/" + fd).c_str(), NULL);
+    }
+
+    // add files
+    for (auto [fdDat, eFile]: cFiles){
+        oFile(eFile.name, fdDat.first.substr(4, fdDat.first.size()), key, false, outFd + "/" + fdDat.second);
+    }
+
+}
+
 // setup things
 void setup(){
     CreateDirectory("temp", NULL);
+    CreateDirectory("data", NULL);
     std::atexit([]{std::filesystem::remove_all("temp");});
 }

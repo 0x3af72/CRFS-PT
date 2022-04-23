@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "_aes.hpp"
+#include "../rand/cs_random.hpp"
 
 #pragma once
 
@@ -14,11 +15,6 @@ class EncryptRes{
         EncryptRes(std::string encrypted, std::string iv, int rPadsize) : encrypted(encrypted), iv(iv), rPadsize(rPadsize){};
         EncryptRes() = default;
 };
-
-// random variables
-std::random_device r;
-std::mt19937 rGenerator(r());
-std::uniform_int_distribution<unsigned short> sRange(std::numeric_limits<unsigned char>::min(), std::numeric_limits<unsigned char>::max());
 
 std::vector<unsigned char> strToVec(std::string str){
     std::vector<unsigned char> res(str.c_str(), str.c_str() + str.size());
@@ -46,7 +42,7 @@ EncryptRes encrypt(std::string raw, std::string key, std::string iv = ""){
     // generate iv
     if (!iv.size()){
         for (int i = 0; i != 16; i++){
-            vIv.push_back(sRange(rGenerator));
+            vIv.push_back(randInt(0, 255));
         }
     } else {vIv = strToVec(iv);}
     std::string fIv(vIv.begin(), vIv.end());

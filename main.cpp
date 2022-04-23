@@ -68,6 +68,8 @@ int main(){
         "open - Open a file\n"
         "delfl - Delete a file\n"
         "delfd - Delete a folder\n"
+        "expfl - Export a file\n"
+        "expfd - Export a folder\n"
         "changepass - Change your password\n"
         ">>> ";
         std::getline(std::cin, option);
@@ -143,6 +145,24 @@ int main(){
                 }
             }
             std::cout << "Password changed!\n";
+            wait();
+        } else if (option == "expfl"){
+            std::string fName, outFd;
+            std::cout << "Enter file name: ";
+            std::getline(std::cin, fName);
+            std::cout << "Folder to export to: ";
+            std::getline(std::cin, outFd);
+            exportFl(fName, curDir, outFd, key);
+            std::cout << "Exported file!\n";
+            wait();
+        } else if (option == "expfd"){
+            std::string fd, outFd;
+            std::cout << "Folder to export: ";
+            std::getline(std::cin, fd);
+            std::cout << "Folder to export to: ";
+            std::getline(std::cin, outFd);
+            exportFd(fd, curDir, outFd, key);
+            std::cout << "Exporte folder!\n";
             wait();
         }
     }
