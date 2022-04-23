@@ -4,7 +4,8 @@ RfS Console Prototype
 
 ## Security
 
-**Hashing**: Passwords are hashed through __100k__ iterations, and salted with a cryptographically-secure salt of 32 characters.
+**Hashing**: Passwords are hashed through __100k__ rounds of sha256, and salted with a cryptographically-secure salt of 32 characters.
+
 **Encryption**: Data is encrypted through AES-256.
 
 ## GUI
