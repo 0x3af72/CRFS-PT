@@ -12,10 +12,6 @@ This is the console implementation of RFS.
 
 **Encryption**: Data is encrypted through AES-256.
 
-## GUI
-
-The GUI will be written using wxWidgets.
-
 ## Functionalities
 
 Users are able to:
